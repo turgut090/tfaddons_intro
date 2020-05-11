@@ -480,9 +480,21 @@ One can observe that highest accuracy was got by the highest learning rate. The 
 
 ## Metrics
 
-The metrics from ```tfaddons``` really come to rescue. Because if one has ever participated in Kaggle competitions, then it is clear that cohen kappa, f1, Matthew Correlation coefficient are the most well-known and evaluated metrics in this community. So, with TensorFlow Addons there is no need for custom functions to assess the result of the Keras model.
+The metrics from ```tfaddons``` really come to rescue. Because if one has ever participated in Kaggle competitions, then it is clear that cohen kappa, f1, Matthews Correlation Coefficient are the most well-known and evaluated metrics in this community. So, with TensorFlow Addons there is no need for custom functions to assess the result of the Keras model.
 
+How to apply? 
 
+``` {r}
+# Compile
+model %>% compile(
+  # apply rectified adam
+  optimizer = optimizer_radam(),
+  # apply sparse max loss
+  loss = loss_sparsemax(),
+  # choose cohen kappa metric
+  metrics = metric_cohen_kappa(num_classes = 10) # for MNIST dataset
+)
+```
 
 
 
