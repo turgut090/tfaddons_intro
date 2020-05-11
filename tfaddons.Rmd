@@ -1,0 +1,490 @@
+  
+---
+title: "TensorFlow Addons and classic Keras"
+description: |
+  Keras is a very powerful framework for building Neural Networks. However, in a fast-moving field like ML, there are a lot of features that are not integrated into core TensorFlow. In this post, we will introduce new types of callbacks, activations, layers, optimizers, losses, metrics, and many more interesting features which are developed by SIG-addons, and fully compatible with the Keras library.
+author:
+  - name: Turgut Abdullayev 
+    url: https://github.com/henry090
+    affiliation: Kapital Bank OJSC
+date: 05-07-2020
+categories:
+  - TensorFlow/Keras
+  - Packages/Releases
+creative_commons: CC BY
+repository_url: https://github.com/henry090/tfaddons_intro
+bibliography: bibliography.bib
+output: 
+  distill::distill_article:
+    self_contained: false
+    toc: true
+    toc_depth: 2
+preview: images/tfaddons.png
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+library(plotly)
+```
+
+The new features by [SIG-addons for TensorFlow 2.x](https://www.tensorflow.org/addons) make working with Keras even more exciting. Because ready to use additional functionalities help users to apply different techniques without any effort. But which functionalities exactly do SIG-addons provide us?
+
+- activations
+- callbacks
+- image
+- layers
+- losses
+- metrics
+- optimizers
+- rnn
+- seq2seq
+- text
+
+To make things easier we tried to make the new types of ops very similar to [keras](https://keras.rstudio.com/) library. E.g. to access activations one can print ```activations``` and see the available list of functions.
+
+```{r, eval=TRUE, echo=FALSE, layout="l-body", fig.cap=" ", out.extra="class=external"}
+knitr::include_graphics("images/activations.png")
+```
+
+Before we start, please make sure that the TensorFlow version in your system is ```2.x```.
+
+```{r}
+tensorflow::install_tensorflow() 
+```
+
+Later, one needs to install ```tfaddons```. Note that currently the package is under development and has to be installed from Github:
+
+```{r}
+devtools::install_github('henry090/tfaddons')
+```
+
+## Dataset preparation
+
+MNIST is one of the built-in datasets in Keras. So, first task is to import and prepare the data.
+
+```{r}
+library(keras)
+library(tfaddons)
+
+mnist = dataset_mnist()
+
+x_train <- mnist$train$x
+y_train <- mnist$train$y
+
+# reshape the dataset
+x_train <- array_reshape(x_train, c(nrow(x_train), 28, 28, 1))
+
+# Transform RGB values into [0,1] range
+x_train <- x_train / 255
+
+# One-hot encoding
+y_train <- to_categorical(y_train, 10)
+```
+
+## Activations
+
+Then take a look at classic Keras activations and later, see the new ones from __tfaddons__.
+
+### Generate random data
+
+```{r}
+set.seed(42)
+x_data <- matrix(data = runif(100,-2.4,2.4), nrow = 100,ncol = 5)
+y_data <-  seq(-5,4.9,0.1) %>% as.matrix()
+
+old_keras = c('activation_elu','activation_exponential','activation_hard_sigmoid',
+              'activation_linear','activation_relu','activation_selu',
+              'activation_sigmoid','activation_softmax','activation_softplus',
+              'activation_softsign','activation_tanh')
+
+k_clear_session()
+```
+
+### Activation Extraction
+
+A small function will quickly provide us with results.
+
+```{r }
+library(plotly)
+library(keras)
+get_activations <- function(activations) {
+  keras_list = list()
+  for (i in 1:length(activations)) {
+    activation_fun = eval(parse(text = activations[i]))
+    model = keras_model_sequential() %>% 
+      layer_dense(1, input_shape = ncol(x_data),
+                  activation = activation_fun) %>% 
+      layer_dense(1, activation = 'linear') %>% 
+      compile(optimizer = 'adagrad', loss = 'mae',
+              metrics = 'mse')
+    
+    model %>% fit(x_data, y_data, verbose = 0,
+                  batch_size = 1, epochs = 2)
+    
+    inputs = model$input                                          
+    outputs = lapply(1:length(model$layers), function(x) model$layers[[x]]$output)   
+    functions = lapply(1:length(outputs), function(x) 
+      k_function(list(inputs), list(outputs[[x]]) ))
+    
+    act_layers = list()
+    
+    for (j in 1:nrow(x_data)) {
+      res = k_reshape(x_data[j,],c(1, 5))
+      layer_outs = functions[[1]](res)[[1]]
+      act_layers[[j]] <- layer_outs
+    }
+    
+    activation = do.call(rbind, act_layers) %>% as.vector() %>% sort()
+    x = seq(-5, 4.9, 0.1)
+    df = data.frame(x = x, activation = activation)
+    
+    a <- list(
+      text = paste(activations[i]),
+      xref = "paper",
+      yref = "paper",
+      yanchor = "bottom",
+      xanchor = "center",
+      align = "center",
+      x = 0.5,
+      y = 1,
+      showarrow = FALSE
+    )
+    
+    p = plot_ly(df, x = ~x, y = ~activation, 
+            mode = 'lines', type = 'scatter',color = I('#CE0002'),
+            hovertext = paste(activations[i])) %>% 
+      layout(annotations = a)
+    keras_list[[i]] <- p
+  }
+  keras_list
+}
+```
+
+### Classic Keras
+
+```{r}
+old_k = get_activations(old_keras)
+subplot(lapply(1:length(old_keras), function(x) old_k[[x]]),nrows = 3, 
+        shareX = TRUE, margin = 0.03) %>% layout(showlegend = FALSE)
+```
+
+```{r layout="l-screen-inset", eval=TRUE, echo=FALSE,fig.height=6}
+old_kk = readRDS("files/old_k.rds")
+subplot(lapply(1:length(old_kk), function(x) old_kk[[x]]),nrows = 3, 
+        shareX = TRUE, margin = 0.03) %>% layout(showlegend = FALSE)
+```
+
+### TensorFlow Addons Activations
+
+Now, we can visualize the new activation functions from TensorFlow Addons.
+
+```{r}
+new_keras = c('activation_gelu','activation_hardshrink','activation_lisht',
+              'activation_mish', 'activation_softshrink',
+              'activation_sparsemax','activation_tanhshrink')
+```
+
+```{r}
+new_k = get_activations(new_keras)
+subplot(lapply(1:length(new_k), function(x) new_k[[x]]),nrows = 3, 
+        shareX = TRUE, margin = 0.03) %>% layout(showlegend = FALSE)
+```
+
+```{r layout="l-screen-inset", eval=TRUE, echo=FALSE,fig.height=6}
+new_kk = readRDS("files/new_k.rds")
+subplot(lapply(1:length(new_kk), function(x) new_kk[[x]]),nrows = 3, 
+        shareX = TRUE, margin = 0.03) %>% layout(showlegend = FALSE)
+```
+
+### Gaussian Error Linear Units (GELUs)
+
+For building a Neural Network for MNIST dataset, we will use a [Sequential API](https://keras.rstudio.com/articles/sequential_model.html) and consequently add new type of layers and activation functions. As an example, below we will apply GELU[@1606.08415] activation function.
+
+Gaussian Error Linear Unit (GELU) is defined as:
+
+$$\text{GELU}(x)=xP(X\leq x)=x\Phi(x)$$
+
+which can be approximated as:
+
+$$0.5x(1 + tanh[\sqrt{2/\pi}(x + 0.044715x^3)])$$
+
+Unlike the ReLU, the GELU and ELU outputs can be both negative and positive. In addition, GELU has the following differences:
+
+- it is not linear in the positive domain and exhibits curvature at all points
+- GELU weights its input depending upon how much greater it is than other inputs
+
+## Layers
+
+With traditional Keras, we have just had ```layer_batch_normalziation``` which is very beneficial if our ```batch_size``` is __not small__. However, as ```layer_group_normalization```[@1803.08494] is batch independent, the small ```batch_size``` will not lead to bad performance as in batch normalization case. Therefore, _group normalization_ is more effective than _batch normalization_ because the first one divides channels into groups and only then normalizes features inside groups. In contrast, batch normalization directly performs normalization by using mean and variance.
+
+```{r, eval=TRUE, echo=FALSE, layout="l-body-outset", fig.cap="[Normalization methods](https://arxiv.org/pdf/1803.08494.pdf). Each subplot shows a feature map tensor, with N as the batch axis, C as the channel axis, and (H, W) as the spatial axes. The pixels in blue are normalized by the same mean and variance, computed by aggregating the values of these pixels.", out.extra="class=external"}
+knitr::include_graphics("images/group_norm.png")
+```
+
+### Keras model architecture
+
+Taking into account all the mentioned details, the Keras model can be defined as:
+
+```{r }
+# Build a sequential model
+model = keras_model_sequential() %>% 
+  layer_conv_2d(filters = 10, kernel_size = c(3,3),input_shape = c(28,28,1),
+                # put channels to the 3rd axis [rows,columns,channels]
+                data_format = "channels_last",
+                #apply activation gelu
+                activation = activation_gelu) %>% 
+  # apply group normalization layer
+  # after convolution split 10 channels into 5 subgroups
+  layer_group_normalization(groups = 5, axis = 3) %>% 
+  layer_flatten() %>% 
+  layer_dense(10, activation = 'softmax')
+```
+
+
+## Losses
+
+There are a lot of loss functions in ```tfaddons``` as well, for example:
+
+IoU[@1908.03851] and GIoU[@1902.09630] are widely used for object detection, segmentation, and tracking because they show better performance during assessment of 2D bounding boxes.
+
+Itersection over Union can be defined as:
+
+$$IoU=\dfrac{\mid{A\cap B\mid}}{\mid{A\cup B\mid}}=\dfrac{\mid I \mid}{\mid U \mid}$$
+
+and Generalized Intersection over Union as:
+
+$$GIoU = \dfrac{|A\cap B|}{|A\cup B|} - \dfrac{|C\backslash(A\cup B)|}{|C|} = IoU - \dfrac{|C\backslash(A\cup B)|}{|C|}$$
+
+
+where "A" and "B" are actuals and predicted values, division of intersection to union. However, if interscetion is 0, then IoU score is 0 as well. Therefore, we are not able to assess the loss because it is zero. In contrast, GIoU has an additional argument "C" which tries to enclose "A" and "B". What does it mean?
+
+Imagine that A and B are operating systems where R has built-in packages from CRAN.
+
+"A" has {"ggplot2", "dplyr", "tidyr", "distill"}
+
+"B" has {"distill", "keras", "tensorflow", "ggplot2"}
+
+From the point of math:
+
+- What they have in common: {"distill", "ggplot2"}
+- What they have in union: {"ggplot2", "dplyr", "tidyr", "distill", "keras", "tensorflow"}
+
+``` {r eval=T,echo=T}
+library(ggplot2)
+
+df = data.frame(pkgs = c("ggplot2","dplyr","tidyr","distill","keras","tensorflow"),
+                x = c(5,   2,2,  4,8,9),
+                y = c(3.2, 3,4, 4,4,2))
+
+ggplot(df, aes(x, y, label = pkgs)) + geom_label() + 
+  scale_y_reverse(breaks = seq(1,10,1)) + theme_bw() +
+  scale_x_continuous(breaks = seq(1,10,1)) +
+  expand_limits(x = c(1, 10), y = c(0, 7)) +
+  # prediction
+  annotate("rect", xmin = 1.2, xmax = 5.9, ymin = 2, ymax = 5,
+           alpha = .1, color = 'red') +
+  # actual
+  annotate("rect", xmin = 3, xmax = 10.5, ymin = 1.5, ymax = 4.5,
+           alpha = .1, color = 'darkgreen')
+```
+
+As we have bounding boxes we can calculate ```IoU``` and ```GIoU``` scores:
+
+```{r}
+iou = loss_giou(mode = 'iou') # or giou
+# [y_min, x_min, y_max, x_max]
+boxes_actual = tf$constant(list(c(1.5,3,4.5,10.5)))
+boxes_predicted = tf$constant(list(c(2,1.2,5,5.9)))
+iou_loss = iou(boxes_actual,boxes_predicted)
+cat('IoU Loss: ', as.array(iou_loss)) 
+```
+
+```{r eval=F}
+IoU Loss:  0.7529812
+```
+
+```{r}
+giou = loss_giou(mode = 'giou') # or iou
+# [y_min, x_min, y_max, x_max]
+giou_loss = giou(boxes_actual,boxes_predicted)
+cat('GIoU Loss: ', as.array(giou_loss)) 
+```
+
+```{r eval=F}
+GIoU Loss:  0.8512915
+```
+
+What if they do not have intersection?
+
+``` {r eval=T,echo=T}
+df = data.frame(pkgs = c("dplyr","tidyr","keras","tensorflow"),
+                x = c(2,2,8,9),
+                y = c(3,4,4,2))
+
+ggplot(df, aes(x, y, label = pkgs)) + geom_label() + 
+  scale_y_reverse(breaks = seq(1,10,1)) + theme_bw() +
+  scale_x_continuous(breaks = seq(1,10,1)) +
+  expand_limits(x = c(1, 10), y = c(0, 7)) +
+  annotate("rect", xmin = 1.2, xmax = 3, ymin = 2, ymax = 5,
+           alpha = .1, color = 'red') +
+  annotate("rect", xmin = 7, xmax = 10.5, ymin = 1.5, ymax = 4.5,
+           alpha = .1, color = 'darkgreen')
+```
+
+### IoU
+
+Unfortunately, IoU makes a bad prediction.
+
+```{r eval=T,echo=T}
+df = data.frame(pkgs = c("dplyr","tidyr","keras","tensorflow"),
+                x = c(2,2,8,9),
+                y = c(3,4,4,2))
+
+ggplot(df, aes(x, y, label = pkgs)) + geom_label() + 
+  scale_y_reverse(breaks = seq(1,10,1)) + theme_bw() +
+  scale_x_continuous(breaks = seq(1,10,1)) +
+  expand_limits(x = c(0, 10), y = c(0, 7)) +
+  annotate("rect", xmin = 1.2, xmax = 3, ymin = 2, ymax = 5,
+           alpha = .1, color = 'red') +
+  annotate("rect", xmin = 7, xmax = 10.5, ymin = 1.5, ymax = 4.5,
+           alpha = .1, color = 'darkgreen') +
+  annotate("rect", xmin = 0.1, xmax = 11, ymin = 0.1, ymax = 7,
+           alpha = .1, color = 'yellow')
+```
+
+### GIoU
+
+From left and right GIoU does not take the whole bound, as a result the loss will not be 0. This loss function performs a better object prediction.
+
+```{r eval=T,echo=T}
+df = data.frame(pkgs = c("dplyr","tidyr","keras","tensorflow"),
+                x = c(2,2,8,9),
+                y = c(3,4,4,2))
+
+ggplot(df, aes(x, y, label = pkgs)) + geom_label() + 
+  scale_y_reverse(breaks = seq(1,10,1)) + theme_bw() +
+  scale_x_continuous(breaks = seq(1,10,1)) +
+  expand_limits(x = c(0, 10), y = c(0, 7)) +
+  annotate("rect", xmin = 1.2, xmax = 3, ymin = 2, ymax = 5,
+           alpha = .1, color = 'red') +
+  annotate("rect", xmin = 7, xmax = 10.5, ymin = 1.5, ymax = 4.5,
+           alpha = .1, color = 'darkgreen') +
+  annotate("rect", xmin = 3.8, xmax = 10.65, ymin = 0.1, ymax = 7,
+           alpha = .1, color = 'yellow') +
+  annotate("rect", xmin = 4, xmax = 6, ymin = 2, ymax = 4,
+           alpha = .1, color = 'orange') +
+  annotate("text", x = 5, y = 3, label = c('C argument'),
+           size=3,
+           color = 'black')
+```
+
+
+Object detection has already been introduced in this [blog](https://blogs.rstudio.com/ai/posts/2018-12-18-object-detection-concepts/). With __tfaddons__ we now can apply this loss function to our object detection model.
+
+
+## Optimizers
+
+Optimizer Rectified_Adam[@1908.03265] was already mentioned on RStudio AI blog. However, it was inside "keras-bert" library. With ```tfaddons``` it is not only possible to apply rectified Adam but also using an attention[@1907.08610] mechanism to gain more control over weights, and as a result to get a remarkable success during model training.
+
+<aside>
+[Bidirectional Encoder Representations from Transformers from R](https://blogs.rstudio.com/ai/posts/2019-09-30-bert-r/)
+</aside> 
+
+According to paper, empirical and theoretical evidence shows that without warmup training at early steps get a large amount of variance which therefore leads to bad performance. Nonetheless, a small learning rate for the first epochs and gradual increase of this parameter may accelerate convergence. But, it is not guaranteed that warmup is always effective and can work in different ML applications. 
+
+If Adam and SGD use experince of past accumulated gradients for better understanding of the next direction, then Lookahead mechanism runs another optimizer within itself to generate so called "fast weights". These weights help for effective update of "slow weights".
+
+```{r, eval=TRUE, echo=FALSE, layout="l-body", fig.cap="(Left) [Visualizing Lookahead](https://arxiv.org/pdf/1907.08610v1.pdf) through a ResNet-32 test accuracy surface at epoch 100 on CIFAR-100. We project the weights onto a plane defined by the first, middle, and last fast (inner-loop) weights. The fast weights are along the blue dashed path. All points that lie on the plane are represented as solid, including the entire Lookahead slow weights path (in purple). Lookahead (middle, bottom right) quickly progresses closer to the minima than SGD (middle, top right) is able to. (Right) Pseudocode for Lookahead.", out.extra="class=external"}
+knitr::include_graphics("images/lookahead.png")
+```
+
+According to paper, Lookahead leads to improved convergence over the inner optimizer and often improved generalization
+performance while being robust to __hyperparameter changes__. 
+
+We also have a [kerastuneR](https://github.com/henry090/kerastuneR) package which is created by [Keras Team](https://keras-team.github.io/keras-tuner/) for tuning the hyperparameters of Keras model. Let's apply this in practice and see what will happen if we apply optimizer Rectified Adam with Lookahead Mechanism and play with hyperparameters.
+
+- Generate Data
+
+```{r}
+library(magrittr)
+data("iris")
+iris$Species =  as.integer(factor(iris$Species))
+iris[1:4] = scale(iris[1:4])
+```
+
+- Define function which will be used for generating model with random defined parameters, such as number of neurons, learning rates.
+
+```{r}
+library(keras)
+library(tensorflow)
+library(kerastuneR)
+
+build_model = function(hp) {
+  
+  model = keras_model_sequential()
+  model %>% layer_dense(units = hp$Int('units',
+                                       min_value = 2,
+                                       max_value = 100,
+                                       step =  32/8),input_shape = ncol(iris) - 1,
+                        activation =  activation_gelu) %>%
+    layer_dense(units = 3, activation = 'softmax') %>%
+    compile(
+      optimizer = tfaddons::lookahead_mechanism(
+        tfaddons::optimizer_radam(
+        learning_rate = hp$Choice('learning_rate',
+                  values = c(1e-2, 1e-3, 1e-4, 1e-5))
+        )
+        ),
+      loss = 'categorical_crossentropy',
+      metrics = 'accuracy')
+  return(model)
+}
+```
+
+
+- Create a tuner object with parameter ```max_trials```^[the total number of trials to test] and parameter ```executions_per_trial```^[the number of models that should be built and fit for each trial].
+
+```{r}
+tuner = RandomSearch(
+  build_model,
+  objective = 'val_accuracy',
+  max_trials = 10,
+  executions_per_trial = 8,
+  directory = 'radam',
+  project_name = 'lookahead_mechanism')
+```
+
+Then, start the search for the best hyperparameter configuration. The call to search has the same signature as ```model %>% fit()```. But here instead of ```fit()``` we call ```fit_tuner()```.
+
+```{r}
+tuner %>% fit_tuner(iris[1:4],to_categorical(iris[5])[,1:3],
+                    epochs = 3, 
+                    validation_split = 0.2)
+```
+
+We can visualize the tuning process:
+
+```{r}
+tuner %>% plot_tuner(type = 'echarts4r')
+```
+
+```{r eval=T,echo=F,layout="l-screen-inset"}
+library(echarts4r)
+df = data.table::fread('files/tune.csv')
+df %>%
+    e_charts() %>%
+    e_parallel(colnames(df))
+```
+
+One can observe that high accuracy was got by higher learning rate. The smaller the learning rate the worse the performace rate. This is because out network is simple and we do not need warmup steps. But, readers can set higher learning rates to see how the lookhead mechanism behave in this case.
+
+## Metrics
+
+
+
+
+
+
+
+
+
