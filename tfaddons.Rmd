@@ -2,7 +2,7 @@
 ---
 title: "TensorFlow Addons and classic Keras"
 description: |
-  Keras is a very powerful framework for building Neural Networks. However, in a fast-moving field like ML, there are a lot of features that are not integrated into core TensorFlow. In this post, we will introduce new types of callbacks, activations, layers, optimizers, losses, metrics, and many more interesting features which are developed by SIG-addons, and fully compatible with the Keras library.
+  Keras is a very powerful framework for building Neural Networks. However, in a fast-moving field like ML, there are a lot of features that are not integrated into core TensorFlow. In this post, we will introduce new types of callbacks, activations, layers, optimizers, losses, metrics, and many more interesting features that are developed by SIG-addons, and fully compatible with the Keras library.
 author:
   - name: Turgut Abdullayev 
     url: https://github.com/henry090
@@ -245,7 +245,7 @@ model = keras_model_sequential() %>%
 
 There are a lot of loss functions in ```tfaddons``` as well, for example:
 
-IoU[@1908.03851] and GIoU[@1902.09630] are widely used for object detection, segmentation, and tracking because they show better performance during assessment of 2D bounding boxes.
+IoU[@1908.03851] and GIoU[@1902.09630] are widely used for object detection, segmentation, and tracking because they show better performance during the assessment of 2D bounding boxes.
 
 Itersection over Union can be defined as:
 
@@ -256,7 +256,7 @@ and Generalized Intersection over Union as:
 $$GIoU = \dfrac{|A\cap B|}{|A\cup B|} - \dfrac{|C\backslash(A\cup B)|}{|C|} = IoU - \dfrac{|C\backslash(A\cup B)|}{|C|}$$
 
 
-where "A" and "B" are actuals and predicted values, division of intersection to union. However, if interscetion is 0, then IoU score is 0 as well. Therefore, we are not able to assess the loss because it is zero. In contrast, GIoU has an additional argument "C" which tries to enclose "A" and "B". What does it mean?
+where "A" and "B" are actuals and predicted values, division of intersection to union. However, if the intersection is 0, then the IoU score is 0 as well. Therefore, we are not able to assess the loss because it is zero. In contrast, GIoU has an additional argument "C" which tries to enclose "A" and "B". What does it mean?
 
 Imagine that A and B are operating systems where R has built-in packages from CRAN.
 
@@ -384,7 +384,7 @@ Object detection has already been introduced in this [blog](https://blogs.rstudi
 
 ## Optimizers
 
-Optimizer Rectified_Adam[@1908.03265] was already mentioned on RStudio AI blog. However, it was inside "keras-bert" library. With ```tfaddons``` it is not only possible to apply rectified Adam but also using an attention[@1907.08610] mechanism to gain more control over weights, and as a result to get a remarkable success during model training.
+Optimizer Rectified_Adam[@1908.03265] was already mentioned on the RStudio AI blog. However, it was inside "keras-bert" library. With ```tfaddons``` it is not only possible to apply rectified Adam but also using attention[@1907.08610] mechanism to gain more control over weights, and as a result to get a remarkable success during model training.
 
 <aside>
 [Bidirectional Encoder Representations from Transformers from R](https://blogs.rstudio.com/ai/posts/2019-09-30-bert-r/)
@@ -392,7 +392,7 @@ Optimizer Rectified_Adam[@1908.03265] was already mentioned on RStudio AI blog. 
 
 According to paper, empirical and theoretical evidence shows that without warmup training at early steps get a large amount of variance which therefore leads to bad performance. Nonetheless, a small learning rate for the first epochs and gradual increase of this parameter may accelerate convergence. But, it is not guaranteed that warmup is always effective and can work in different ML applications. 
 
-If Adam and SGD use experince of past accumulated gradients for better understanding of the next direction, then Lookahead mechanism runs another optimizer within itself to generate so called "fast weights". These weights help for effective update of "slow weights".
+If Adam and SGD use the experience of past accumulated gradients for a better understanding of the next direction, then the Lookahead mechanism runs another optimizer within itself to generate so-called "fast weights". These weights help for an effective update of "slow weights".
 
 ```{r, eval=TRUE, echo=FALSE, layout="l-body", fig.cap="(Left) [Visualizing Lookahead](https://arxiv.org/pdf/1907.08610v1.pdf) through a ResNet-32 test accuracy surface at epoch 100 on CIFAR-100. We project the weights onto a plane defined by the first, middle, and last fast (inner-loop) weights. The fast weights are along the blue dashed path. All points that lie on the plane are represented as solid, including the entire Lookahead slow weights path (in purple). Lookahead (middle, bottom right) quickly progresses closer to the minima than SGD (middle, top right) is able to. (Right) Pseudocode for Lookahead.", out.extra="class=external"}
 knitr::include_graphics("images/lookahead.png")
@@ -412,12 +412,13 @@ iris$Species =  as.integer(factor(iris$Species))
 iris[1:4] = scale(iris[1:4])
 ```
 
-- Define function which will be used for generating model with random defined parameters, such as number of neurons, learning rates.
+- Define a function which will be used for generating a model with random defined parameters, such as the number of neurons, learning rates.
 
 ```{r}
 library(keras)
 library(tensorflow)
 library(kerastuneR)
+library(tfaddons)
 
 build_model = function(hp) {
   
@@ -448,7 +449,7 @@ build_model = function(hp) {
 tuner = RandomSearch(
   build_model,
   objective = 'val_accuracy',
-  max_trials = 10,
+  max_trials = 30,
   executions_per_trial = 8,
   directory = 'radam',
   project_name = 'lookahead_mechanism')
@@ -458,7 +459,7 @@ Then, start the search for the best hyperparameter configuration. The call to se
 
 ```{r}
 tuner %>% fit_tuner(iris[1:4],to_categorical(iris[5])[,1:3],
-                    epochs = 3, 
+                    epochs = 2, 
                     validation_split = 0.2)
 ```
 
@@ -476,11 +477,11 @@ df %>%
     e_parallel(colnames(df))
 ```
 
-One can observe that highest accuracy was got by the highest learning rate. The smaller the learning rate the worse the performace. This is because out network is simple and we do not need warmup steps. But, readers can set higher learning rates to see how the lookahead mechanism behave in this case.
+One can observe that the highest accuracy was got by the highest learning rate. The smaller the learning rate the worse the performance. This is because our network is simple and we do not need warmup steps. But, readers can set higher learning rates and even add another dense layer to see how the lookahead mechanism behaves in this case.
 
 ## Metrics
 
-The metrics from ```tfaddons``` really come to rescue. Because if one has ever participated in Kaggle competitions, then it is clear that cohen kappa, f1, Matthews Correlation Coefficient are the most well-known and evaluated metrics in this community. So, with TensorFlow Addons there is no need for custom functions to assess the result of the Keras model.
+The metrics from ```tfaddons``` really come to rescue. Because if one has ever participated in Kaggle competitions, then it is clear that cohen kappa, f1, Matthews Correlation Coefficient are the most well-known and used metrics in this community. So, with TensorFlow Addons, there is no need for custom functions to assess the result of the Keras model.
 
 How to apply? 
 
@@ -571,6 +572,6 @@ In fact, we have just covered a lot of interesting features from TensorFlow Addo
 
 We encourage readers to experiment with these ops and share their perspectives on RStudio AI Blog!
 
-
+Thanks for reading!
 
 
