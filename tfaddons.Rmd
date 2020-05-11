@@ -476,9 +476,11 @@ df %>%
     e_parallel(colnames(df))
 ```
 
-One can observe that highest accuracy was got by the highest learning rate. The smaller the learning rate the worse the performace. This is because out network is simple and we do not need warmup steps. But, readers can set higher learning rates to see how the lookhead mechanism behave in this case.
+One can observe that highest accuracy was got by the highest learning rate. The smaller the learning rate the worse the performace. This is because out network is simple and we do not need warmup steps. But, readers can set higher learning rates to see how the lookahead mechanism behave in this case.
 
 ## Metrics
+
+The metrics from ```tfaddons``` really come to rescue. Because if one has ever participated in Kaggle competitions, then it is clear that cohen kappa, f1, Matthew Correlation coefficient are the most well-known and evaluated metrics in this community. So, with TensorFlow Addons there is no need for custom functions to assess the result of the Keras model.
 
 
 
