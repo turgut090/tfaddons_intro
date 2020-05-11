@@ -542,7 +542,7 @@ val_loss: 0.0583 - val_cohen_kappa: 0.9104
 
 ## Callbacks
 
-But we have forgot to mention new callbacks! Now it is possible to stop training after certain time and even get a progress bar while training a model. Just pass callbacks as usual into ```fit``` function:
+But we have forgotten to mention new callbacks! Now it is possible to stop training after certain time and even get a progress bar while training a model. Just pass callbacks as usual into ```fit``` function:
 
 ```{r}
 model %>% fit(
@@ -560,10 +560,16 @@ Timed stopping at epoch 1 after training for 0:00:06
 ```
 
 
+## End notes
 
+In fact, we have just covered a lot of interesting features from TensorFlow Addons. However, there are a giant number of operations which is not possible to introduce in this post, such as:
 
+- image ops
+- text ops
+- rnn ops
+- attention mechanisms, e.g: attention bahdanau, luong, monotonic and many more. [Neural machine translation](https://blogs.rstudio.com/ai/posts/2018-07-30-attention-layer/) was already explained. One can apply new methods from *tfaddons* to the same case or even directly find a new example [here](https://github.com/henry090/tfaddons/blob/master/vignettes/neural%20machine%20translation.R).
 
-
+We encourage readers to experiment with these ops and share their perspectives on RStudio AI Blog!
 
 
 
