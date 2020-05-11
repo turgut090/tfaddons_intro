@@ -540,7 +540,9 @@ Train on 48000 samples, validate on 12000 samples
 val_loss: 0.0583 - val_cohen_kappa: 0.9104
 ```
 
-But we have forgot to mention new callbacks! Now it is possible to stop training after certain time. Just pass callback as usual into ```fit``` function:
+## Callbacks
+
+But we have forgot to mention new callbacks! Now it is possible to stop training after certain time and even get a progress bar while training a model. Just pass callbacks as usual into ```fit``` function:
 
 ```{r}
 model %>% fit(
