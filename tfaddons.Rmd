@@ -224,7 +224,25 @@ knitr::include_graphics("images/group_norm.png")
 
 ### Layer Multi-Head Attention
 
-```{r eval=T,echo=T,layout="l-screen-inset",fig.height=10}
+Multi-Head attention operation takes roots from "Attention Is All You Need"[@1706.03762] paper and defines a multiplication of 3 matrices (dot product), such as: 
+
+- query
+- key
+- value
+
+The model proposed by this paper is called the Transformer which consists of Encoders and Decoders.
+
+<center>
+
+```{r, eval=TRUE, echo=FALSE, layout="l-body-outset", fig.cap=" ", out.extra="class=external"}
+knitr::include_graphics("images/dino_transformer.jpeg")
+```
+
+</center>
+
+Before going into a brief explanation of Transformers, it is better to visualize the model architecture.
+
+```{r eval=T,echo=T,layout="l-screen-inset",fig.height=7}
 library(DiagrammeR)
 grViz("
 digraph boxes_and_circles {
@@ -307,8 +325,12 @@ digraph boxes_and_circles {
   Linear->Decoder_6
   
   edge [arrowhead=vee]
-  node [color=violet, shape =plaintext,fontsize = 45, fontcolor=blue]
-  Transformer->{Encoder_6, Decoder_6}
+  node [shape =plaintext,fontsize = 45, fontcolor=blue]
+  Transformer->{Encoder, Decoder}
+  Encoder [shape =plaintext,fontsize = 45, fontcolor=darkgreen]
+  Encoder->{Encoder_6}
+  Decoder [shape =plaintext,fontsize = 45, fontcolor=red]
+  Decoder->{Decoder_6}
 
 }
 ")
