@@ -245,7 +245,7 @@ Before going into a brief explanation of Transformers, it is better to visualize
 ```{r eval=T,echo=T,layout="l-screen-inset",fig.height=7}
 library(DiagrammeR)
 grViz("
-digraph boxes_and_circles {
+digraph Transformer {
 
   graph [overlap = false, fontsize = 10]
 
@@ -301,9 +301,11 @@ digraph boxes_and_circles {
   Feed_Forward__NN [style = filled, fillcolor = grey]
   Add_Norm_ [style = filled, fillcolor = cornflowerblue,fontcolor=white]
   Add_Norm__ [style = filled, fillcolor = cornflowerblue,fontcolor=white]
+  Add__Norm__ [style = filled, fillcolor = cornflowerblue,fontcolor=white]
     Decoder_1 ->{Add_Norm_}
     Add_Norm_ -> Feed_Forward__NN
-    Feed_Forward__NN->Encoder_Decoder_Attention
+    Feed_Forward__NN ->Add__Norm__
+    Add__Norm__->Encoder_Decoder_Attention
     Encoder_Decoder_Attention-> Add_Norm__
     Add_Norm__ ->Masked_Multi_Head_Attention
     
@@ -336,6 +338,60 @@ digraph boxes_and_circles {
 ")
 
 ```
+
+Indeed, this seems a bit challenging to understand but we can divide it into different sections:
+
+- Econder
+- Decoder
+  - Feed Forward NN
+  - Layer Normalization
+  - Multi-Head Attention mechanism
+  - Positional Embeddings
+  - Linear & Softmax activation
+  
+__Where to watch?__
+
+Our task is to start from bottom to top. 
+
+1. The first thing we see are inputs. They are our plain *Input* texts. E.g.: "Very easy". Our input consists of 2 words.
+2. Imagine that each word has 512 embeddings[@1301.3781]. Then we have 2 words (rows) with 512 columns (dimensions). Therefore, these are your *Input Embeddings*.
+3. The title *Positional Embeddings* gives us a clue about the meaning, it simply encodes the position of each word against the other ones.
+4. From the left of the plot, we see 4 layers: Multi-Head Attention mechanism, Layer Normalization, Feed Forward NN. What is the purpose of these layers? Before explanation, we can observe that in the middle, on the left side Encoder has so-called sub-encoders (Encoder_1, ..., Encoder_6). In fact, each of these encoders contains these 4 layers from Multi-head up to Layer normalization. From the right of the plot, we have 6 layers. This means that each Decoder has 6 of these layers.
+5. Let's begin from the *Multi-head* layer:
+
+$$\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^T}{\sqrt{d_k}})V $$
+As we already mentioned above there are 3 type of matrices in Attention layer: Query, Key, and Value matrices where Q and K matrices are multiplied, then divided by the square root of Key matrix dimensions (in paper the number of Key dimensions are 64, so sqrt of 64 is 8). Then apply softmax activation in order to normalize the outputs. After that we have to multiply normalized value by Value matrix. 
+Note that, these matrices are created by the model during the training process. 
+
+Till now, we just covered the attention mechanism but what are the Heads?
+Attention contains 3 Matrices, Heads consist of multiple Attentions. So, basically the purpose of Heads is to concentrate attention over the multiple Attention mechanisms and then concatenate all of Q, K, V matrices, and multiply with jointly created matrix:
+
+$$W^O $$
+
+6. The information from Attentions moves to next Layer - Feed Forward NN. But keep in mind that we never lose the dimensionality of our input vectors, 512. So, all the time inputs go into certain layer, is updated, and without losing dimension size is transferred to the next layer. Between Attention and Feed Forward NN, there are Normalisation Layers.
+
+7. After delivering the output to the final Enocder_6, internal representation of vectors is transferred to the stack of decoders. Wha is new here on the right side?
+
+8. We have Masked and Encoder-Decoder Attentions. As we go from bottom to top the first thing we need to do is to analyze Masked Multi-Head Attention Layer. In the decoder, masked Attention prevents positions from attending to subsequent positions. This means that future positions are masked and set to −∞. For example:
+
+English                      |German                        |
+-----------------------------|------------------------------|
+I love R programming language|Ich liebe R Programmiersprache|
+
+In order to predict first 3 words "I love R" first we encode them like dimensions: "1 2 3" and then German version as "4 5 6". What are we doing here?
+
+We use all 3 inputs from English and parallelly translate sentence, but which parallel operations? E.g.:
+
+1 2 3 => Predict 4th word
+
+1 2 3 + 4 => Predict 5th word
+
+1 2 3 + 4 + 5 => Predict 6th word
+
+9. Encoder-Decoder Attention is like a standard Attention Layer however it takes Q matrix from below layer; K, and V matrices are taken from stack of Encoders.
+
+10. As final steps, the the output from Decoders stack are normalized by Softmax and Linear function (logits to probabilities)
+
 
 ### Keras model architecture
 
