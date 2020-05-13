@@ -370,7 +370,7 @@ $$W^O $$
 
 6. The information from Attentions moves to next Layer - Feed Forward NN. But keep in mind that we never lose the dimensionality of our input vectors, 512. So, all the time inputs go into certain layer, is updated, and without losing dimension size is transferred to the next layer. Between Attention and Feed Forward NN, there are Normalisation Layers.
 
-7. After delivering the output to the final Enocder_6, internal representation of vectors is transferred to the stack of decoders. Wha is new here on the right side?
+7. After delivering the output to the final Enocder_6, internal representation of vectors is transferred to the stack of decoders. What is on the right side of the diagram?
 
 8. We have Masked and Encoder-Decoder Attentions. As we go from bottom to top the first thing we need to do is to analyze Masked Multi-Head Attention Layer. In the decoder, masked Attention prevents positions from attending to subsequent positions. This means that future positions are masked and set to −∞. For example:
 
@@ -378,7 +378,7 @@ English                      |German                        |
 -----------------------------|------------------------------|
 I love R programming language|Ich liebe R Programmiersprache|
 
-In order to predict first 3 words "I love R" first we encode them like dimensions: "1 2 3" and then German version as "4 5 6". What are we doing here?
+In order to predict first 3 words "I love R" first we encode them like dimensions: "1 2 3" and then German as "4 5 6". What are we doing here?
 
 We use all 3 inputs from English and parallelly translate sentence, but which parallel operations? E.g.:
 
@@ -391,6 +391,15 @@ We use all 3 inputs from English and parallelly translate sentence, but which pa
 9. Encoder-Decoder Attention is like a standard Attention Layer however it takes Q matrix from below layer; K, and V matrices are taken from stack of Encoders.
 
 10. As final steps, the the output from Decoders stack are normalized by Softmax and Linear function (logits to probabilities)
+
+```{r}
+mha = layer_multi_head_attention(head_size = 128, num_heads = 128)
+query = tf$random$uniform(list(32L, 20L, 200L)) # (batch_size, query_elements, query_depth)
+key = tf$random$uniform(list(32L, 15L, 300L)) # (batch_size, key_elements, key_depth)
+value = tf$random$uniform(list(32L, 15L, 400L)) # (batch_size, key_elements, value_depth)
+attention = mha(list(query, key, value)) # (batch_size, query_elements, value_depth)
+
+```
 
 
 ### Keras model architecture
