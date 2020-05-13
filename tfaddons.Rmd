@@ -6,8 +6,8 @@ description: |
 author:
   - name: Turgut Abdullayev 
     url: https://github.com/henry090
-    affiliation: Kapital Bank OJSC
-date: 05-07-2020
+    affiliation: Baku State University
+date: 05-13-2020
 categories:
   - TensorFlow/Keras
   - Packages/Releases
@@ -27,7 +27,9 @@ knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 library(plotly)
 ```
 
-The new features by [SIG-addons for TensorFlow 2.x](https://www.tensorflow.org/addons) make working with Keras even more exciting. Because ready to use additional functionalities help users to apply different techniques without any effort. But which functionalities exactly do SIG-addons provide us?
+The [tfaddons](https://github.com/henry090/tfaddons) package provides R wrappers to TensorFlow Addons.
+
+The new features by [SIG-addons for TensorFlow 2.x](https://www.tensorflow.org/addons) make working with Keras even more exciting. Because ready to use additional functionalities help users to apply different techniques without any effort (e.g. custom losses, metrics, classes). But which functionalities exactly do SIG-addons provide us?
 
 - activations
 - callbacks
@@ -215,7 +217,7 @@ Unlike the ReLU, the GELU and ELU outputs can be both negative and positive. In 
 
 ## Layers
 
-### Layer group normalziation
+### Layer group normalization
 With traditional Keras, we have just had ```layer_batch_normalziation``` which is very beneficial if our ```batch_size``` is __not small__. However, as ```layer_group_normalization```[@1803.08494] is batch independent, the small ```batch_size``` will not lead to bad performance as in batch normalization case. Therefore, _group normalization_ is more effective than _batch normalization_ because the first one divides channels into groups and only then normalizes features inside groups. In contrast, batch normalization directly performs normalization by using mean and variance.
 
 ```{r, eval=TRUE, echo=FALSE, layout="l-body-outset", fig.cap="[Normalization methods](https://arxiv.org/pdf/1803.08494.pdf). Each subplot shows a feature map tensor, with N as the batch axis, C as the channel axis, and (H, W) as the spatial axes. The pixels in blue are normalized by the same mean and variance, computed by aggregating the values of these pixels.", out.extra="class=external"}
@@ -571,7 +573,7 @@ Optimizer Rectified_Adam[@1908.03265] was already mentioned on the RStudio AI bl
 [Bidirectional Encoder Representations from Transformers from R](https://blogs.rstudio.com/ai/posts/2019-09-30-bert-r/)
 </aside> 
 
-According to paper, empirical and theoretical evidence shows that without warmup training at early steps get a large amount of variance which therefore leads to bad performance. Nonetheless, a small learning rate for the first epochs and gradual increase of this parameter may accelerate convergence. But, it is not guaranteed that warmup is always effective and can work in different ML applications. 
+Empirical and theoretical evidence shows that without warmup training at early steps get a large amount of variance which therefore leads to bad performance. Nonetheless, a small learning rate for the first epochs and gradual increase of this parameter may accelerate convergence. But, it is not guaranteed that warmup is always effective and can work in different ML applications. 
 
 If Adam and SGD use the experience of past accumulated gradients for a better understanding of the next direction, then the Lookahead mechanism runs another optimizer within itself to generate so-called "fast weights". These weights help for an effective update of "slow weights".
 
@@ -582,9 +584,9 @@ knitr::include_graphics("images/lookahead.png")
 According to paper, Lookahead leads to improved convergence over the inner optimizer and often improved generalization
 performance while being robust to __hyperparameter changes__. 
 
-We also have a [kerastuneR](https://github.com/henry090/kerastuneR) package which is created by [Keras Team](https://keras-team.github.io/keras-tuner/) for tuning the hyperparameters of Keras model. Let's apply this in practice and see what will happen if we apply optimizer Rectified Adam with Lookahead Mechanism and play with hyperparameters.
+So, we also have a [kerastuneR](https://github.com/henry090/kerastuneR) package which is created by [Keras Team](https://keras-team.github.io/keras-tuner/) for tuning the hyperparameters of Keras model. Let's apply this in practice and see what will happen if we apply optimizer Rectified Adam with Lookahead Mechanism and play with hyperparameters.
 
-- Generate Data
+- Import and prerocess Iris
 
 ```{r}
 library(magrittr)
@@ -666,7 +668,7 @@ The metrics from ```tfaddons``` really come to rescue. Because if one has ever p
 
 How to apply? 
 
-## Example of TensorFLow Addons with Keras
+## Example of TF Addons with Keras
 
 ``` {r}
 library(keras)
@@ -724,7 +726,7 @@ cohen_kappa: 0.8074 - val_loss: 0.0583 - val_cohen_kappa: 0.9104
 
 ## Callbacks
 
-But we have forgotten to mention new callbacks! Now it is possible to stop training after certain time and even get a progress bar while training a model. Just pass callbacks as usual into ```fit``` function:
+But we almost have forgotten to mention new callbacks! Now it is possible to stop training after a certain time and even get a progress bar while training a model. Just pass callbacks as usual into ```fit``` function:
 
 ```{r}
 model %>% fit(
