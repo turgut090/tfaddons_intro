@@ -29,7 +29,7 @@ library(plotly)
 
 The [tfaddons](https://github.com/henry090/tfaddons) package provides R wrappers to TensorFlow Addons.
 
-The new features by [SIG-addons for TensorFlow 2.x](https://www.tensorflow.org/addons) make working with Keras even more exciting. Because ready to use additional functionalities help users to apply different techniques without any effort (e.g. custom losses, metrics, classes). But which functionalities exactly do SIG-addons provide us?
+The new features by [SIG-addons for TensorFlow 2.x](https://www.tensorflow.org/addons) make working with Keras even more exciting. Because ready to use additional functionalities help users to apply different techniques without any effort (e.g. writing custom losses, metrics, classes). But which operations exactly do SIG-addons provide us?
 
 - activations
 - callbacks
@@ -42,7 +42,7 @@ The new features by [SIG-addons for TensorFlow 2.x](https://www.tensorflow.org/a
 - seq2seq
 - text
 
-To make things easier we tried to make the new types of ops very similar to [keras](https://keras.rstudio.com/) library. E.g. to access activations one can print ```activations``` and see the available list of functions.
+To make things easier we made the new types of ops very similar to [keras](https://keras.rstudio.com/) library. E.g. to access activations one can print ```activation``` and see the available list of functions.
 
 ```{r, eval=TRUE, echo=FALSE, layout="l-body", fig.cap=" ", out.extra="class=external"}
 knitr::include_graphics("images/activations.png")
@@ -60,32 +60,9 @@ Later, one needs to install ```tfaddons```. Note that currently the package is u
 devtools::install_github('henry090/tfaddons')
 ```
 
-## Dataset preparation
-
-MNIST is one of the built-in datasets in Keras. So, first task is to import and prepare the data.
-
-```{r}
-library(keras)
-library(tfaddons)
-
-mnist = dataset_mnist()
-
-x_train <- mnist$train$x
-y_train <- mnist$train$y
-
-# reshape the dataset
-x_train <- array_reshape(x_train, c(nrow(x_train), 28, 28, 1))
-
-# Transform RGB values into [0,1] range
-x_train <- x_train / 255
-
-# One-hot encoding
-y_train <- to_categorical(y_train, 10)
-```
-
 ## Activations
 
-Then take a look at classic Keras activations and later, see the new ones from __tfaddons__.
+We can take a look at classic Keras activations and later, see the new ones from __tfaddons__.
 
 ### Generate random data
 
@@ -104,7 +81,7 @@ k_clear_session()
 
 ### Activation Extraction
 
-A small function will quickly provide us with results.
+A small function will quickly provide us with results. So, first we train a model and then extract activations of 1st layer from each model.
 
 ```{r }
 library(plotly)
@@ -178,7 +155,7 @@ subplot(lapply(1:length(old_kk), function(x) old_kk[[x]]),nrows = 3,
 
 ### TensorFlow Addons Activations
 
-Now, we can visualize the new activation functions from TensorFlow Addons.
+Now, the same for the new activation functions from TensorFlow Addons.
 
 ```{r}
 new_keras = c('activation_gelu','activation_hardshrink','activation_lisht',
@@ -200,13 +177,14 @@ subplot(lapply(1:length(new_kk), function(x) new_kk[[x]]),nrows = 3,
 
 ### Gaussian Error Linear Units (GELUs)
 
-For building a Neural Network for MNIST dataset, we will use a [Sequential API](https://keras.rstudio.com/articles/sequential_model.html) and consequently add new type of layers and activation functions. As an example, below we will apply GELU[@1606.08415] activation function.
+As we already familiar with MNIST, it will be easier to apply the new features from ```tfaddons``` to this dataset. Using [Sequential API](https://keras.rstudio.com/articles/sequential_model.html) one can consequently add new type of layers and activation functions. For example, below we will choose GELU[@1606.08415] as an activation function for the 1st layer. But first, we need to understand the GELU.
 
 Gaussian Error Linear Unit (GELU) is defined as:
 
 $$\text{GELU}(x)=xP(X\leq x)=x\Phi(x)$$
+Where $\Phi$ is the cumulative distribution function of a Gaussian.
 
-which can be approximated as:
+GELUs can be approximated as:
 
 $$0.5x(1 + tanh[\sqrt{2/\pi}(x + 0.044715x^3)])$$
 
@@ -218,7 +196,7 @@ Unlike the ReLU, the GELU and ELU outputs can be both negative and positive. In 
 ## Layers
 
 ### Layer group normalization
-With traditional Keras, we have just had ```layer_batch_normalziation``` which is very beneficial if our ```batch_size``` is __not small__. However, as ```layer_group_normalization```[@1803.08494] is batch independent, the small ```batch_size``` will not lead to bad performance as in batch normalization case. Therefore, _group normalization_ is more effective than _batch normalization_ because the first one divides channels into groups and only then normalizes features inside groups. In contrast, batch normalization directly performs normalization by using mean and variance.
+With traditional Keras, we have just had ```layer_batch_normalziation``` which is very effective if our ```batch_size``` is __not small__. However, as ```layer_group_normalization```[@1803.08494] is batch independent, the small ```batch_size``` will not lead to bad performance as in batch normalization case. Therefore, _group normalization_ is more stable and powerful than _batch normalization_ because the first one divides channels into groups and only then normalizes features inside groups. In contrast, batch normalization directly performs normalization by using mean and variance.
 
 ```{r, eval=TRUE, echo=FALSE, layout="l-body-outset", fig.cap="[Normalization methods](https://arxiv.org/pdf/1803.08494.pdf). Each subplot shows a feature map tensor, with N as the batch axis, C as the channel axis, and (H, W) as the spatial axes. The pixels in blue are normalized by the same mean and variance, computed by aggregating the values of these pixels.", out.extra="class=external"}
 knitr::include_graphics("images/group_norm.png")
@@ -341,7 +319,7 @@ digraph Transformer {
 
 ```
 
-Indeed, this seems a bit challenging to understand but we can divide it into different sections:
+Indeed, this seems a bit challenging to understand but we can divide the plot into different sections:
 
 - Econder
 - Decoder
@@ -355,26 +333,24 @@ __Where to watch?__
 
 Our task is to start from bottom to top. 
 
-1. The first thing we see are inputs. They are our plain *Input* texts. E.g.: "Very easy". Our input consists of 2 words.
-2. Imagine that each word has 512 embeddings[@1301.3781]. Then we have 2 words (rows) with 512 columns (dimensions). Therefore, these are your *Input Embeddings*.
+1. The first thing we see are the inputs. They are our plain *Input* texts. E.g.: "Very easy". Our input consists of 2 words.
+2. Imagine that each word has 512 embeddings[@1301.3781]. Then we have 2 words (rows) with 512 columns (dimensions). Hence, these are your *Input Embeddings*.
 3. The title *Positional Embeddings* gives us a clue about the meaning, it simply encodes the position of each word against the other ones.
-4. From the left of the plot, we see 4 layers: Multi-Head Attention mechanism, Layer Normalization, Feed Forward NN. What is the purpose of these layers? Before explanation, we can observe that in the middle, on the left side Encoder has so-called sub-encoders (Encoder_1, ..., Encoder_6). In fact, each of these encoders contains these 4 layers from Multi-head up to Layer normalization. From the right of the plot, we have 6 layers. This means that each Decoder has 6 of these layers.
-5. Let's begin from the *Multi-head* layer:
+4. From the left of the plot, we see 3 unique layers: Multi-Head Attention mechanism, Layer Normalization, Feed Forward NN. What is the purpose of these layers? Before explanation, we can observe that in the middle, on the left side Encoder has so-called sub-encoders (Encoder_1, ..., Encoder_6). In fact, each of these encoders contains these 4 layers from Multi-head layer up to Layer normalization. From the right of the plot, we have 6 layers. This means that each Decoder has 6 of these layers.
+5. Let's begin from the *Multi-head* Attention layer:
 
 $$\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^T}{\sqrt{d_k}})V $$
-As we already mentioned above there are 3 type of matrices in Attention layer: Query, Key, and Value matrices where Q and K matrices are multiplied, then divided by the square root of Key matrix dimensions (in paper the number of Key dimensions are 64, so sqrt of 64 is 8). Then apply softmax activation in order to normalize the outputs. After that we have to multiply normalized value by Value matrix. 
+As we already mentioned above there is 3 type of matrices in Attention layer: Query, Key, and Value matrices where Q and K matrices are multiplied, then divided by the square root of Key matrix dimensions (in the paper the number of Key dimensions are 64, so sqrt of 64 is 8). Then the softmax activation is applied in order to normalize the outputs. Later, we have to multiply the normalized value by the Value matrix. 
 Note that, these matrices are created by the model during the training process. 
 
 Till now, we just covered the attention mechanism but what are the Heads?
-Attention contains 3 Matrices, Heads consist of multiple Attentions. So, basically the purpose of Heads is to concentrate attention over the multiple Attention mechanisms and then concatenate all of Q, K, V matrices, and multiply with jointly created matrix:
+Attention contains 3 Matrices, Heads consist of multiple Attentions. So, basically the purpose of Heads is to concentrate attention over the multiple Attention mechanisms and then concatenate all of $Q$, $K$, $V$ matrices, and multiply with jointly created matrix $W^O$.
 
-$$W^O $$
+6. The information from Attentions moves to the next Layer - Feed Forward NN. But keep in mind that we never lose the dimensionality of our input vectors, 512. So, all the time inputs go into a certain layer, is updated, and without losing dimension size is transferred to the next layer. Between Attention and Feed Forward NN, there are Normalization Layers.
 
-6. The information from Attentions moves to next Layer - Feed Forward NN. But keep in mind that we never lose the dimensionality of our input vectors, 512. So, all the time inputs go into certain layer, is updated, and without losing dimension size is transferred to the next layer. Between Attention and Feed Forward NN, there are Normalisation Layers.
+7. After transferring the output to the final Enocder_6, the internal representation of vectors is moved to the stack of decoders. What is on the right side of the diagram?
 
-7. After delivering the output to the final Enocder_6, internal representation of vectors is transferred to the stack of decoders. What is on the right side of the diagram?
-
-8. We have Masked and Encoder-Decoder Attentions. As we go from bottom to top the first thing we need to do is to analyze Masked Multi-Head Attention Layer. In the decoder, masked Attention prevents positions from attending to subsequent positions. This means that future positions are masked and set to −∞. For example:
+8. We have Masked and Encoder-Decoder Attentions. As we go from bottom to top the first thing we need to do is to analyze Masked Multi-Head Attention Layer. In the decoder, masked Attention prevents positions from attending to subsequent positions. This means that future positions are masked and set to $−∞$. For example:
 
 English                      |German                        |
 -----------------------------|------------------------------|
@@ -382,7 +358,7 @@ I love R programming language|Ich liebe R Programmiersprache|
 
 In order to predict first 3 words "I love R" first we encode them like dimensions: "1 2 3" and then German as "4 5 6". What are we doing here?
 
-We use all 3 inputs from English and parallelly translate sentence, but which parallel operations? E.g.:
+We use all 3 inputs from English and parallelly translate sentence, but which parallel computations do we mean? For example:
 
 1 2 3 => Predict 4th word
 
@@ -392,7 +368,9 @@ We use all 3 inputs from English and parallelly translate sentence, but which pa
 
 9. Encoder-Decoder Attention is like a standard Attention Layer however it takes Q matrix from below layer; K, and V matrices are taken from stack of Encoders.
 
-10. As final steps, the the output from Decoders stack are normalized by Softmax and Linear function (logits to probabilities)
+10. As a final step, the output from the stack of Decoders are normalized by Softmax and then, by Linear function (logits to probabilities)
+
+Example of Multi-Head attention layer with ```tfaddons```:
 
 ```{r}
 mha = layer_multi_head_attention(head_size = 128, num_heads = 128)
@@ -406,7 +384,12 @@ attention = mha(list(query, key, value)) # (batch_size, query_elements, value_de
 
 ### Keras model architecture
 
-Taking into account all the mentioned details, the Keras model can be defined as:
+As mentioned, using Sequential API the Keras model with:
+
+- activation GELU
+- layer_group_normalization
+
+can be defined as:
 
 ```{r }
 # Build a sequential model
@@ -449,8 +432,8 @@ Imagine that A and B are operating systems where R has built-in packages from CR
 
 From the point of math:
 
-- What they have in common: {"distill", "ggplot2"}
-- What they have in union: {"ggplot2", "dplyr", "tidyr", "distill", "keras", "tensorflow"}
+- What they have in common:$A\cap B = \{ distill,\:ggplot2 \}$
+- What they have in union: $A\cup B = \{ ggplot2,\:dplyr,\:tidyr, \:distill,\: keras,\:tensorflow \}$
 
 ``` {r eval=T,echo=T}
 library(ggplot2)
@@ -516,7 +499,7 @@ ggplot(df, aes(x, y, label = pkgs)) + geom_label() +
 
 ### IoU
 
-Unfortunately, IoU makes a bad prediction.
+According to paper, IoU makes a bad prediction. Because loss is 0.
 
 ```{r eval=T,echo=T}
 df = data.frame(pkgs = c("dplyr","tidyr","keras","tensorflow"),
@@ -537,7 +520,7 @@ ggplot(df, aes(x, y, label = pkgs)) + geom_label() +
 
 ### GIoU
 
-From left and right GIoU does not take the whole bound, as a result the loss will not be 0. This loss function performs a better object prediction.
+However, with GIoU the situation is different. From left and right GIoU does not take the whole bound, as a result the loss will not be 0. Hence, the function performs a better object prediction.
 
 ```{r eval=T,echo=T}
 df = data.frame(pkgs = c("dplyr","tidyr","keras","tensorflow"),
@@ -595,7 +578,7 @@ iris$Species =  as.integer(factor(iris$Species))
 iris[1:4] = scale(iris[1:4])
 ```
 
-- Define a function which will be used for generating a model with random defined parameters, such as the number of neurons, learning rates.
+- Define a model-building function which will be used for generating a model with random defined parameters, such as the number of neurons, learning rates. The function takes an argument __hp__ from which one can sample hyperparameters, such as ```hp$Int('units', min_value = 32, max_value = 512, step = 32)``` (an integer from a certain range).
 
 ```{r}
 library(keras)
@@ -646,7 +629,7 @@ tuner %>% fit_tuner(iris[1:4],to_categorical(iris[5])[,1:3],
                     validation_split = 0.2)
 ```
 
-We can visualize the tuning process:
+Visualize the models for better understanding:
 
 ```{r}
 tuner %>% plot_tuner(type = 'echarts4r')
@@ -726,7 +709,7 @@ cohen_kappa: 0.8074 - val_loss: 0.0583 - val_cohen_kappa: 0.9104
 
 ## Callbacks
 
-But we almost have forgotten to mention new callbacks! Now it is possible to stop training after a certain time and even get a progress bar while training a model. Just pass callbacks as usual into ```fit``` function:
+We almost have forgotten to mention the new callbacks! Now it is possible to stop training after a certain time and even get a progress bar while training a model. Just pass callbacks as usual into ```fit``` function:
 
 ```{r}
 model %>% fit(
@@ -751,8 +734,10 @@ In fact, we have just covered a lot of interesting features from TensorFlow Addo
 - image ops
 - text ops
 - rnn ops
-- attention mechanisms, e.g: attention bahdanau, luong, monotonic and many more. [Neural machine translation](https://blogs.rstudio.com/ai/posts/2018-07-30-attention-layer/) was already explained. One can apply new methods from *tfaddons* to the same case or even directly find a new example [here](https://github.com/henry090/tfaddons/blob/master/vignettes/neural%20machine%20translation.R).
+- attention mechanisms, e.g: attention Bahdanau, Luong, Monotonic, and many more. 
 
-We encourage readers to experiment with these ops and share their perspectives on RStudio AI Blog!
+[Neural machine translation](https://blogs.rstudio.com/ai/posts/2018-07-30-attention-layer/) was already explained. One can apply new methods from *tfaddons* to the same case or even directly find a new example [here](https://github.com/henry090/tfaddons/blob/master/vignettes/neural%20machine%20translation.R).
+
+We encourage readers to experiment with TensforFlow Addons and share their perspectives on RStudio AI Blog!
 
 Thanks for reading!
